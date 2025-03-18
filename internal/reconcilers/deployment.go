@@ -47,7 +47,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, doclingServ *v1alp
 }
 
 func (r *DeploymentReconciler) deploymentForDoclingServ(doclingServ *v1alpha1.DoclingServ) *appsv1.Deployment {
-	labels := labelsForRulesEngine(doclingServ.Name)
+	labels := labelsForDocling(doclingServ.Name)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      doclingServ.Name,
@@ -70,7 +70,6 @@ func (r *DeploymentReconciler) deploymentForDoclingServ(doclingServ *v1alpha1.Do
 							"docling-serve",
 							"run",
 						},
-						//Ports: []corev1.ContainerPort{{}}
 						ImagePullPolicy: corev1.PullIfNotPresent,
 					},
 					},
@@ -80,14 +79,17 @@ func (r *DeploymentReconciler) deploymentForDoclingServ(doclingServ *v1alpha1.Do
 	}
 
 	if doclingServ.Spec.EnableUI {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, []string{"--enable-ui"}...)
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{{
+			Name:  "DOCLING_SERVE_ENABLE_UI",
+			Value: "true",
+		}}...)
 	}
 
-	ctrl.SetControllerReference(doclingServ, deployment, r.Scheme)
+	_ = ctrl.SetControllerReference(doclingServ, deployment, r.Scheme)
 
 	return deployment
 }
 
-func labelsForRulesEngine(name string) map[string]string {
+func labelsForDocling(name string) map[string]string {
 	return map[string]string{"app": "docling-serve", "doclingserv_cr": name}
 }
